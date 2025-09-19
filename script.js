@@ -10,7 +10,7 @@ const LINKS = {
   contacts: "pages/contacts.html",
   personnel: "pages/personnel.html",
   rotations: "pages/rotations.html",
-  suggestion: "http://localhost:3000",
+  suggestion: "https://mj2-suggestion-box-production.up.railway.app",
 };
 
 function applyLinks() {
