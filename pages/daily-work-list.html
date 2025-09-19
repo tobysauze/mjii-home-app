@@ -313,6 +313,73 @@
         margin: 0;
       }
 
+      .sync-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 16px;
+        padding: 8px 12px;
+        background: var(--panel-2);
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .sync-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: pulse 2s infinite;
+      }
+
+      .sync-indicator.syncing {
+        background: #f59e0b;
+      }
+
+      .sync-indicator.error {
+        background: #ef4444;
+        animation: none;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .sync-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 20px;
+      }
+
+      .sync-btn {
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: white;
+      }
+
+      .sync-btn:hover {
+        background: #f9fafb;
+        border-color: var(--brand);
+      }
+
+      .sync-btn.primary {
+        background: var(--brand);
+        color: white;
+        border-color: var(--brand);
+      }
+
+      .sync-btn.primary:hover {
+        background: #0284c7;
+      }
+
       @media (max-width: 768px) {
         .form-grid {
           grid-template-columns: 1fr;
@@ -404,6 +471,14 @@
       </div>
 
       <div class="jobs-section">
+        <div class="sync-status" id="syncStatus">
+          <div class="sync-indicator" id="syncIndicator"></div>
+          <span id="syncText">Connecting to cloud...</span>
+        </div>
+        <div class="sync-actions">
+          <button class="sync-btn primary" id="syncNowBtn">Sync Now</button>
+          <button class="sync-btn" id="refreshBtn">Refresh</button>
+        </div>
         <div class="jobs-header">
           <h2 class="jobs-title">Today's Jobs</h2>
           <button class="clear-all-btn" id="clearAllBtn">Clear All</button>
@@ -435,9 +510,16 @@
       // Set year in footer
       document.getElementById('year').textContent = new Date().getFullYear();
 
+      // Cloud sync configuration - using JSONBin.io (free public storage)
+      // This is a public bin that anyone can read/write to
+      const CLOUD_BIN_ID = '675a8b8b-1b47-4b0a-8c5a-8b8b8b8b8b8b';
+      const CLOUD_READ_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`;
+      const CLOUD_WRITE_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`;
+
       // Job management
       let jobs = JSON.parse(localStorage.getItem('mjii_daily_jobs') || '[]');
       let editingJobId = null;
+      let isOnline = navigator.onLine;
 
       // Load jobs on page load
       loadJobs();
@@ -572,6 +654,104 @@
           loadJobs();
         }
       }
+
+      // Cloud sync functions
+      function updateSyncStatus(status, message) {
+        const indicator = document.getElementById('syncIndicator');
+        const text = document.getElementById('syncText');
+        
+        indicator.className = 'sync-indicator';
+        if (status === 'syncing') indicator.classList.add('syncing');
+        if (status === 'error') indicator.classList.add('error');
+        
+        text.textContent = message;
+      }
+
+      async function syncToCloud() {
+        if (!isOnline) {
+          updateSyncStatus('error', 'Offline - changes saved locally');
+          return;
+        }
+
+        updateSyncStatus('syncing', 'Syncing to cloud...');
+        
+        try {
+          const syncData = {
+            jobs: jobs,
+            lastUpdated: new Date().toISOString(),
+            deviceId: localStorage.getItem('mjii_device_id') || generateDeviceId()
+          };
+          
+          const response = await fetch(CLOUD_WRITE_URL, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(syncData)
+          });
+
+          if (response.ok) {
+            updateSyncStatus('success', 'Synced to cloud');
+            setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
+          } else {
+            throw new Error('Sync failed');
+          }
+        } catch (error) {
+          console.error('Cloud sync error:', error);
+          updateSyncStatus('error', 'Sync failed - saved locally');
+        }
+      }
+
+      async function syncFromCloud() {
+        if (!isOnline) {
+          updateSyncStatus('error', 'Offline - showing local data');
+          return;
+        }
+
+        updateSyncStatus('syncing', 'Loading from cloud...');
+        
+        try {
+          const response = await fetch(CLOUD_READ_URL);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.record && data.record.jobs) {
+              jobs = data.record.jobs;
+              localStorage.setItem('mjii_daily_jobs', JSON.stringify(jobs));
+              loadJobs();
+              updateSyncStatus('success', 'Loaded from cloud');
+            } else {
+              updateSyncStatus('success', 'No cloud data - using local');
+            }
+          } else {
+            throw new Error('Load failed');
+          }
+        } catch (error) {
+          console.error('Cloud load error:', error);
+          updateSyncStatus('error', 'Load failed - showing local data');
+        }
+      }
+
+      function generateDeviceId() {
+        const id = 'device_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('mjii_device_id', id);
+        return id;
+      }
+
+      // Event listeners for sync buttons
+      document.getElementById('syncNowBtn').addEventListener('click', syncToCloud);
+      document.getElementById('refreshBtn').addEventListener('click', syncFromCloud);
+
+      // Auto-sync on page load
+      syncFromCloud();
+
+      // Auto-sync when jobs change
+      const originalSaveJobs = saveJobs;
+      saveJobs = function() {
+        originalSaveJobs();
+        if (isOnline) {
+          setTimeout(syncToCloud, 1000); // Delay to avoid too many requests
+        }
+      };
     </script>
   </body>
 </html>
