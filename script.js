@@ -10,7 +10,7 @@ const LINKS = {
   contacts: "pages/contacts.html",
   personnel: "pages/personnel.html",
   rotations: "pages/rotations.html",
-  suggestion: "https://your-username.github.io/mj2-suggestion-box", // Update this URL when you deploy the Suggestion Box
+  suggestion: "http://localhost:3000",
 };
 
 function applyLinks() {
