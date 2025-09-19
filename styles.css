@@ -205,7 +205,7 @@ body {
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  --count: 9;
+  --count: 10;
   --angle: calc(360deg / var(--count) * var(--i));
   --radius: min(300px, 38vw);
   translate: calc(cos(var(--angle)) * var(--radius)) calc(sin(var(--angle)) * var(--radius));

@@ -1,7 +1,8 @@
 // Configure your real links here
 const LINKS = {
-  voly: "pages/voly.html",
-  sms: "pages/sms.html",
+  voly: "https://secure.voly.co.uk/?r=T",
+  sms: "http://192.168.13.31/mvc/Dashboard/Overview",
+  pinpoint: "https://app.pinpointworks.com/#/site/a7205047dfb6e7a99a6f5da172c7fef7",
   ptw: "pages/permit-to-work.html",
   procedures: "pages/procedures.html",
   manuals: "pages/manuals.html",
@@ -15,6 +16,7 @@ function applyLinks() {
   const map = [
     ["link-voly", LINKS.voly],
     ["link-sms", LINKS.sms],
+    ["link-pinpoint", LINKS.pinpoint],
     ["link-ptw", LINKS.ptw],
     ["link-procedures", LINKS.procedures],
     ["link-manuals", LINKS.manuals],
@@ -24,6 +26,7 @@ function applyLinks() {
     ["link-suggestion", LINKS.suggestion],
     ["ring-voly", LINKS.voly],
     ["ring-sms", LINKS.sms],
+    ["ring-pinpoint", LINKS.pinpoint],
     ["ring-ptw", LINKS.ptw],
     ["ring-procedures", LINKS.procedures],
     ["ring-manuals", LINKS.manuals],
