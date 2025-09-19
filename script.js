@@ -2,6 +2,7 @@
 const LINKS = {
   voly: "https://secure.voly.co.uk/?r=T",
   sms: "http://192.168.13.31/mvc/Dashboard/Overview",
+  idea: "http://192.168.13.31/login.aspx?ReturnUrl=%2fmvc%2fDashboard%2fOverview",
   pinpoint: "https://app.pinpointworks.com/#/site/a7205047dfb6e7a99a6f5da172c7fef7",
   ptw: "pages/permit-to-work.html",
   procedures: "file:///S:/Engineering/Admin/Procedures Master File",
@@ -16,6 +17,7 @@ function applyLinks() {
   const map = [
     ["link-voly", LINKS.voly],
     ["link-sms", LINKS.sms],
+    ["link-idea", LINKS.idea],
     ["link-pinpoint", LINKS.pinpoint],
     ["link-ptw", LINKS.ptw],
     ["link-procedures", LINKS.procedures],
@@ -26,6 +28,7 @@ function applyLinks() {
     ["link-suggestion", LINKS.suggestion],
     ["ring-voly", LINKS.voly],
     ["ring-sms", LINKS.sms],
+    ["ring-idea", LINKS.idea],
     ["ring-pinpoint", LINKS.pinpoint],
     ["ring-ptw", LINKS.ptw],
     ["ring-procedures", LINKS.procedures],
