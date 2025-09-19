@@ -4,7 +4,7 @@ const LINKS = {
   sms: "http://192.168.13.31/mvc/Dashboard/Overview",
   pinpoint: "https://app.pinpointworks.com/#/site/a7205047dfb6e7a99a6f5da172c7fef7",
   ptw: "pages/permit-to-work.html",
-  procedures: "pages/procedures.html",
+  procedures: "file:///S:/Engineering/Admin/Procedures Master File",
   manuals: "pages/manuals.html",
   contacts: "pages/contacts.html",
   personnel: "pages/personnel.html",
