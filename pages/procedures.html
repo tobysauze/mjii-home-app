@@ -62,12 +62,27 @@
         <p>Click the button below to open the Procedures Master File location</p>
         
         <button class="open-button" onclick="openProcedures()">
-            📁 Open Procedures Folder
+            📁 Try Auto-Open Folder
+        </button>
+        
+        <button class="open-button" onclick="copyPath()" style="background: #10b981;">
+            📋 Copy Path to Clipboard
         </button>
         
         <div id="status" class="status"></div>
         
         <p><strong>Location:</strong> S:\Engineering\Admin\Procedures Master File</p>
+        
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <h3>📝 Manual Method (Most Reliable):</h3>
+            <ol>
+                <li>Click "Copy Path to Clipboard" button above</li>
+                <li>Open Windows Explorer</li>
+                <li>Click in the address bar</li>
+                <li>Press Ctrl+V to paste the path</li>
+                <li>Press Enter</li>
+            </ol>
+        </div>
         
         <p><em>If the folder doesn't open automatically, you may need to:</em></p>
         <ul>
@@ -84,40 +99,41 @@
             status.className = 'status';
             status.textContent = 'Attempting to open folder...';
             
-            // Try multiple methods to open the folder
-            const methods = [
-                () => window.open('file:///S:/Engineering/Admin/Procedures Master File', '_blank'),
-                () => window.open('file://S:/Engineering/Admin/Procedures Master File', '_blank'),
-                () => window.open('explorer://S:/Engineering/Admin/Procedures Master File', '_blank'),
-                () => {
-                    // Create a temporary link and click it
-                    const link = document.createElement('a');
-                    link.href = 'file:///S:/Engineering/Admin/Procedures Master File';
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            ];
-            
-            let success = false;
-            for (let i = 0; i < methods.length; i++) {
-                try {
-                    methods[i]();
-                    success = true;
-                    break;
-                } catch (e) {
-                    console.log(`Method ${i + 1} failed:`, e);
-                }
-            }
-            
-            if (success) {
+            // Try the most reliable method first
+            try {
+                // Create a link element and trigger download/opening
+                const link = document.createElement('a');
+                link.href = 'file:///S:/Engineering/Admin/Procedures Master File';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                
+                // Try to trigger the click
+                link.click();
+                document.body.removeChild(link);
+                
                 status.className = 'status success';
-                status.textContent = 'Folder should be opening...';
-            } else {
+                status.textContent = 'Attempting to open folder... If it doesn\'t open, try the manual method below.';
+                
+            } catch (e) {
                 status.className = 'status error';
-                status.textContent = 'Could not open folder automatically. Please open Windows Explorer and navigate to: S:\\Engineering\\Admin\\Procedures Master File';
+                status.textContent = 'Browser blocked automatic opening. Please use the manual method below.';
             }
+        }
+        
+        function copyPath() {
+            const path = 'S:\\Engineering\\Admin\\Procedures Master File';
+            navigator.clipboard.writeText(path).then(() => {
+                alert('Path copied to clipboard! Paste it into Windows Explorer address bar.');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = path;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Path copied to clipboard! Paste it into Windows Explorer address bar.');
+            });
         }
         
         // Auto-try to open on page load
