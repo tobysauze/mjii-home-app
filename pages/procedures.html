@@ -11,22 +11,6 @@
             margin: 0 auto;
             padding: 20px;
         }
-        .access-instructions {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .file-path {
-            background: #1f2937;
-            color: #f9fafb;
-            padding: 12px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            margin: 10px 0;
-            word-break: break-all;
-        }
         .back-link {
             display: inline-block;
             margin-bottom: 20px;
@@ -37,6 +21,37 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        .open-button {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px 0;
+            display: block;
+        }
+        .open-button:hover {
+            background: #0284c7;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 6px;
+            display: none;
+        }
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
     </style>
 </head>
 <body>
@@ -44,44 +59,71 @@
         <a href="../index.html" class="back-link">← Back to MJII Operations Hub</a>
         
         <h1>📘 Procedures</h1>
-        <p>Access the MJII Procedures Master File</p>
+        <p>Click the button below to open the Procedures Master File location</p>
         
-        <div class="access-instructions">
-            <h2>How to Access Procedures</h2>
-            
-            <h3>Option 1: Direct File Access</h3>
-            <p>If you're on the yacht's network with the S: drive mapped:</p>
-            <div class="file-path">S:\Engineering\Admin\Procedures Master File</div>
-            
-            <h3>Option 2: Windows Explorer</h3>
-            <ol>
-                <li>Open Windows Explorer</li>
-                <li>Navigate to: <strong>S:\Engineering\Admin\Procedures Master File</strong></li>
-                <li>Browse the procedure files</li>
-            </ol>
-            
-            <h3>Option 3: Network Access</h3>
-            <p>If the S: drive isn't mapped:</p>
-            <ol>
-                <li>Open Windows Explorer</li>
-                <li>Type in the address bar: <strong>\\server-name\Engineering\Admin\Procedures Master File</strong></li>
-                <li>Replace "server-name" with the actual server name</li>
-            </ol>
-            
-            <h3>Need Help?</h3>
-            <p>Contact the IT department or engineering team if you need assistance accessing the procedures.</p>
-        </div>
+        <button class="open-button" onclick="openProcedures()">
+            📁 Open Procedures Folder
+        </button>
         
-        <div class="access-instructions">
-            <h2>Common Procedures</h2>
-            <ul>
-                <li>Safety Procedures</li>
-                <li>Maintenance Procedures</li>
-                <li>Emergency Procedures</li>
-                <li>Operational Procedures</li>
-                <li>Guest Service Procedures</li>
-            </ul>
-        </div>
+        <div id="status" class="status"></div>
+        
+        <p><strong>Location:</strong> S:\Engineering\Admin\Procedures Master File</p>
+        
+        <p><em>If the folder doesn't open automatically, you may need to:</em></p>
+        <ul>
+            <li>Ensure you're connected to the yacht's network</li>
+            <li>Make sure the S: drive is mapped</li>
+            <li>Try opening Windows Explorer and navigating to the path manually</li>
+        </ul>
     </div>
+
+    <script>
+        function openProcedures() {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.className = 'status';
+            status.textContent = 'Attempting to open folder...';
+            
+            // Try multiple methods to open the folder
+            const methods = [
+                () => window.open('file:///S:/Engineering/Admin/Procedures Master File', '_blank'),
+                () => window.open('file://S:/Engineering/Admin/Procedures Master File', '_blank'),
+                () => window.open('explorer://S:/Engineering/Admin/Procedures Master File', '_blank'),
+                () => {
+                    // Create a temporary link and click it
+                    const link = document.createElement('a');
+                    link.href = 'file:///S:/Engineering/Admin/Procedures Master File';
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            ];
+            
+            let success = false;
+            for (let i = 0; i < methods.length; i++) {
+                try {
+                    methods[i]();
+                    success = true;
+                    break;
+                } catch (e) {
+                    console.log(`Method ${i + 1} failed:`, e);
+                }
+            }
+            
+            if (success) {
+                status.className = 'status success';
+                status.textContent = 'Folder should be opening...';
+            } else {
+                status.className = 'status error';
+                status.textContent = 'Could not open folder automatically. Please open Windows Explorer and navigate to: S:\\Engineering\\Admin\\Procedures Master File';
+            }
+        }
+        
+        // Auto-try to open on page load
+        window.addEventListener('load', () => {
+            setTimeout(openProcedures, 500);
+        });
+    </script>
 </body>
 </html>
