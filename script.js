@@ -107,7 +107,7 @@ function initEngineWidget() {
   const widget = document.createElement("aside");
   widget.className = "engine-widget";
   widget.innerHTML = `
-    <h3>Engines</h3>
+    <h3>M/E Start Countdown</h3>
     <div class="engine-meta">Due every ${ENGINE_INTERVAL_DAYS} days</div>
     <div class="engine-status" id="engine-status" aria-live="polite">Loading…</div>
     <div class="engine-meta" id="engine-last">Last started: —</div>
@@ -118,7 +118,16 @@ function initEngineWidget() {
     </div>
     <div class="engine-meta" id="engine-test-result"></div>
   `;
-  document.body.appendChild(widget);
+  
+  // On mobile, insert the widget into the main content area
+  if (window.innerWidth <= 719) {
+    const main = document.querySelector('main');
+    const firstSection = main.querySelector('.section');
+    main.insertBefore(widget, firstSection);
+  } else {
+    // On desktop, append to body as fixed positioned element
+    document.body.appendChild(widget);
+  }
 
   const startBtn = widget.querySelector("#engine-start-btn");
   startBtn.addEventListener("click", () => {
@@ -163,6 +172,18 @@ function initEngineWidget() {
   // Also check once on load
   maybeSendDueEmail(lastDate);
 }
+
+// Handle window resize to reposition engine widget
+window.addEventListener('resize', () => {
+  const widget = document.querySelector('.engine-widget');
+  if (widget) {
+    // Remove widget from current location
+    widget.remove();
+    // Reinitialize with new positioning
+    initEngineWidget();
+    loadEngineState();
+  }
+});
 
 function renderEngineState(widget, lastDate, opts = {}) {
   const statusEl = widget.querySelector("#engine-status");
