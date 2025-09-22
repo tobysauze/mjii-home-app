@@ -498,7 +498,12 @@
       </div>
     </footer>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script>
+      // Supabase configuration (same as ER Log and Shopping List)
+      window.SUPABASE_URL = 'https://sfcvfadxgfpdoeachfal.supabase.co';
+      window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmY3ZmYWR4Z2ZwZG9lYWNoZmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MDI2ODYsImV4cCI6MjA3MjQ3ODY4Nn0.WhwYwHUz-elJHx4bXTNHw5eKF_VO47I3UM3HZXzQ5jU';
+
       // Set current date
       document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-GB', {
         weekday: 'long',
@@ -510,11 +515,15 @@
       // Set year in footer
       document.getElementById('year').textContent = new Date().getFullYear();
 
-      // Cloud sync configuration - using a working free service
-      // Using JSONBin.io with a public bin that doesn't require API keys
-      const CLOUD_BIN_ID = '675a8b8b-1b47-4b0a-8c5a-8b8b8b8b8b8b';
-      const CLOUD_READ_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`;
-      const CLOUD_WRITE_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`;
+      // Supabase cloud sync configuration
+      let supabaseClient = null;
+      
+      // Initialize Supabase client
+      if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+          auth: { persistSession: false }
+        });
+      }
 
       // Job management
       let jobs = JSON.parse(localStorage.getItem('mjii_daily_jobs') || '[]');
@@ -673,21 +682,32 @@
           return;
         }
 
+        if (!supabaseClient) {
+          updateSyncStatus('error', 'Cloud sync not configured');
+          return;
+        }
+
         updateSyncStatus('syncing', 'Syncing to cloud...');
         
         try {
-          const syncData = {
-            jobs: jobs,
-            lastUpdated: new Date().toISOString(),
-            deviceId: localStorage.getItem('mjii_device_id') || generateDeviceId()
-          };
-          
-          // Use a simple working approach - store in localStorage with a shared key
-          // This simulates cloud storage and will work across devices on the same network
-          localStorage.setItem('mjii_shared_jobs', JSON.stringify(syncData));
-          
-          // Also store in sessionStorage for cross-tab sharing
-          sessionStorage.setItem('mjii_shared_jobs', JSON.stringify(syncData));
+          // Save each job to Supabase
+          for (const job of jobs) {
+            const { error } = await supabaseClient
+              .from('daily_jobs')
+              .upsert({
+                id: job.id,
+                title: job.title,
+                priority: job.priority,
+                assigned_to: job.assignedTo,
+                estimated_time: job.estimatedTime,
+                description: job.description,
+                completed: job.completed,
+                created_at: job.createdAt,
+                updated_at: new Date().toISOString()
+              });
+            
+            if (error) throw error;
+          }
           
           updateSyncStatus('success', 'Synced to cloud');
           setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
@@ -703,30 +723,39 @@
           return;
         }
 
+        if (!supabaseClient) {
+          updateSyncStatus('error', 'Cloud sync not configured');
+          return;
+        }
+
         updateSyncStatus('syncing', 'Loading from cloud...');
         
         try {
-          // Check for shared data in localStorage first
-          let sharedData = localStorage.getItem('mjii_shared_jobs');
+          const { data, error } = await supabaseClient
+            .from('daily_jobs')
+            .select('*')
+            .order('created_at', { ascending: true });
           
-          // If not found, check sessionStorage
-          if (!sharedData) {
-            sharedData = sessionStorage.getItem('mjii_shared_jobs');
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            jobs = data.map(row => ({
+              id: row.id,
+              title: row.title,
+              priority: row.priority,
+              assignedTo: row.assigned_to,
+              estimatedTime: row.estimated_time,
+              description: row.description,
+              completed: row.completed,
+              createdAt: row.created_at
+            }));
+            
+            localStorage.setItem('mjii_daily_jobs', JSON.stringify(jobs));
+            loadJobs();
+            updateSyncStatus('success', 'Loaded from cloud');
+          } else {
+            updateSyncStatus('success', 'No cloud data - using local');
           }
-          
-          if (sharedData) {
-            const parsed = JSON.parse(sharedData);
-            if (parsed.jobs && Array.isArray(parsed.jobs)) {
-              // Update local jobs with shared data
-              jobs = parsed.jobs;
-              localStorage.setItem('mjii_daily_jobs', JSON.stringify(jobs));
-              loadJobs();
-              updateSyncStatus('success', 'Loaded from cloud');
-              return;
-            }
-          }
-          
-          updateSyncStatus('success', 'No shared data - using local');
         } catch (error) {
           console.error('Cloud load error:', error);
           updateSyncStatus('error', 'Load failed - showing local data');
