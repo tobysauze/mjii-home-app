@@ -516,7 +516,12 @@
       </div>
     </footer>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
     <script>
+      // Supabase configuration (same as ER Log)
+      window.SUPABASE_URL = 'https://sfcvfadxgfpdoeachfal.supabase.co';
+      window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmY3ZmYWR4Z2ZwZG9lYWNoZmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MDI2ODYsImV4cCI6MjA3MjQ3ODY4Nn0.WhwYwHUz-elJHx4bXTNHw5eKF_VO47I3UM3HZXzQ5jU';
+
       // Set year in footer
       document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -664,11 +669,15 @@
         return id;
       }
 
-      // Cloud sync functions - using a real working cloud database
-      // Using JSONBin.io with a public bin that works without API keys
-      const CLOUD_BIN_ID = '675a8b8b-1b47-4b0a-8c5a-8b8b8b8b8b8b';
-      const CLOUD_READ_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`;
-      const CLOUD_WRITE_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`;
+      // Supabase cloud sync functions
+      let supabaseClient = null;
+      
+      // Initialize Supabase client
+      if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+          auth: { persistSession: false }
+        });
+      }
 
       function updateSyncStatus(status, message) {
         const indicator = document.getElementById('syncIndicator');
@@ -687,29 +696,35 @@
           return;
         }
 
+        if (!supabaseClient) {
+          updateSyncStatus('error', 'Cloud sync not configured');
+          return;
+        }
+
         updateSyncStatus('syncing', 'Syncing to cloud...');
         
         try {
-          const syncData = {
-            items: items,
-            lastUpdated: new Date().toISOString(),
-            deviceId: localStorage.getItem('mjii_device_id') || generateDeviceId()
-          };
-          
-          const response = await fetch(CLOUD_WRITE_URL, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(syncData)
-          });
-
-          if (response.ok) {
-            updateSyncStatus('success', 'Synced to cloud');
-            setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
-          } else {
-            throw new Error('Sync failed');
+          // Save each item to Supabase
+          for (const item of items) {
+            const { error } = await supabaseClient
+              .from('shopping_items')
+              .upsert({
+                id: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                category: item.category,
+                priority: item.priority,
+                purchased: item.purchased,
+                added_by: item.addedBy,
+                created_at: item.createdAt,
+                updated_at: new Date().toISOString()
+              });
+            
+            if (error) throw error;
           }
+          
+          updateSyncStatus('success', 'Synced to cloud');
+          setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
         } catch (error) {
           console.error('Cloud sync error:', error);
           updateSyncStatus('error', 'Sync failed - saved locally');
@@ -722,22 +737,38 @@
           return;
         }
 
+        if (!supabaseClient) {
+          updateSyncStatus('error', 'Cloud sync not configured');
+          return;
+        }
+
         updateSyncStatus('syncing', 'Loading from cloud...');
         
         try {
-          const response = await fetch(CLOUD_READ_URL);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.record && data.record.items) {
-              items = data.record.items;
-              localStorage.setItem('mjii_shopping_items', JSON.stringify(items));
-              loadItems();
-              updateSyncStatus('success', 'Loaded from cloud');
-            } else {
-              updateSyncStatus('success', 'No cloud data - using local');
-            }
+          const { data, error } = await supabaseClient
+            .from('shopping_items')
+            .select('*')
+            .order('created_at', { ascending: true });
+          
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            items = data.map(row => ({
+              id: row.id,
+              name: row.name,
+              quantity: row.quantity,
+              category: row.category,
+              priority: row.priority,
+              purchased: row.purchased,
+              addedBy: row.added_by,
+              createdAt: row.created_at
+            }));
+            
+            localStorage.setItem('mjii_shopping_items', JSON.stringify(items));
+            loadItems();
+            updateSyncStatus('success', 'Loaded from cloud');
           } else {
-            throw new Error('Load failed');
+            updateSyncStatus('success', 'No cloud data - using local');
           }
         } catch (error) {
           console.error('Cloud load error:', error);
