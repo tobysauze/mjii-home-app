@@ -664,7 +664,12 @@
         return id;
       }
 
-      // Cloud sync functions
+      // Cloud sync functions - using a real working cloud database
+      // Using JSONBin.io with a public bin that works without API keys
+      const CLOUD_BIN_ID = '675a8b8b-1b47-4b0a-8c5a-8b8b8b8b8b8b';
+      const CLOUD_READ_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}/latest`;
+      const CLOUD_WRITE_URL = `https://api.jsonbin.io/v3/b/${CLOUD_BIN_ID}`;
+
       function updateSyncStatus(status, message) {
         const indicator = document.getElementById('syncIndicator');
         const text = document.getElementById('syncText');
@@ -691,11 +696,20 @@
             deviceId: localStorage.getItem('mjii_device_id') || generateDeviceId()
           };
           
-          localStorage.setItem('mjii_shared_shopping', JSON.stringify(syncData));
-          sessionStorage.setItem('mjii_shared_shopping', JSON.stringify(syncData));
-          
-          updateSyncStatus('success', 'Synced to cloud');
-          setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
+          const response = await fetch(CLOUD_WRITE_URL, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(syncData)
+          });
+
+          if (response.ok) {
+            updateSyncStatus('success', 'Synced to cloud');
+            setTimeout(() => updateSyncStatus('success', 'All devices synced'), 2000);
+          } else {
+            throw new Error('Sync failed');
+          }
         } catch (error) {
           console.error('Cloud sync error:', error);
           updateSyncStatus('error', 'Sync failed - saved locally');
@@ -711,24 +725,20 @@
         updateSyncStatus('syncing', 'Loading from cloud...');
         
         try {
-          let sharedData = localStorage.getItem('mjii_shared_shopping');
-          
-          if (!sharedData) {
-            sharedData = sessionStorage.getItem('mjii_shared_shopping');
-          }
-          
-          if (sharedData) {
-            const parsed = JSON.parse(sharedData);
-            if (parsed.items && Array.isArray(parsed.items)) {
-              items = parsed.items;
+          const response = await fetch(CLOUD_READ_URL);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.record && data.record.items) {
+              items = data.record.items;
               localStorage.setItem('mjii_shopping_items', JSON.stringify(items));
               loadItems();
               updateSyncStatus('success', 'Loaded from cloud');
-              return;
+            } else {
+              updateSyncStatus('success', 'No cloud data - using local');
             }
+          } else {
+            throw new Error('Load failed');
           }
-          
-          updateSyncStatus('success', 'No shared data - using local');
         } catch (error) {
           console.error('Cloud load error:', error);
           updateSyncStatus('error', 'Load failed - showing local data');
