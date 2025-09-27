@@ -207,6 +207,27 @@
         font-weight: bold;
       }
 
+      .item-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .item-photo {
+        width: 50px;
+        height: 50px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+
+      .item-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
       .item-details {
         flex: 1;
         display: flex;
@@ -259,6 +280,26 @@
         background: #fef2f2;
         color: #dc2626;
         border: 1px solid #fecaca;
+      }
+
+      .item-purchase-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        transition: background-color 0.2s ease;
+      }
+
+      .item-purchase-link:hover {
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
       }
 
       .item-priority.medium {
@@ -484,6 +525,16 @@
               <option value="high">High</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="itemPhotoUrl">Photo URL (optional)</label>
+            <input type="url" id="itemPhotoUrl" class="form-input" placeholder="https://example.com/image.jpg">
+            <small class="form-help">Paste a direct link to an image</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="itemPurchaseUrl">Purchase URL (optional)</label>
+            <input type="url" id="itemPurchaseUrl" class="form-input" placeholder="https://store.com/product">
+            <small class="form-help">Link to where you can buy this item</small>
+          </div>
           <button type="submit" class="add-item-btn">Add Item</button>
         </form>
       </div>
@@ -542,6 +593,8 @@
           quantity: document.getElementById('itemQuantity').value || '1',
           category: document.getElementById('itemCategory').value,
           priority: document.getElementById('itemPriority').value,
+          photoUrl: document.getElementById('itemPhotoUrl').value || '',
+          purchaseUrl: document.getElementById('itemPurchaseUrl').value || '',
           purchased: false,
           addedBy: localStorage.getItem('mjii_device_id') || generateDeviceId(),
           createdAt: new Date().toISOString()
@@ -591,11 +644,15 @@
         itemsList.innerHTML = sortedItems.map(item => `
           <div class="item-card ${item.purchased ? 'purchased' : ''}" data-item-id="${item.id}">
             <div class="item-checkbox ${item.purchased ? 'checked' : ''}" onclick="toggleItemPurchased('${item.id}')"></div>
-            <div class="item-details">
-              <span class="item-name ${item.purchased ? 'purchased' : ''}">${escapeHtml(item.name)}</span>
-              <span class="item-quantity">${escapeHtml(item.quantity)}</span>
-              <span class="item-category">${getCategoryLabel(item.category)}</span>
-              <span class="item-priority ${item.priority}">${item.priority}</span>
+            <div class="item-content">
+              ${item.photoUrl ? `<div class="item-photo"><img src="${escapeHtml(item.photoUrl)}" alt="${escapeHtml(item.name)}" onerror="this.style.display='none'"></div>` : ''}
+              <div class="item-details">
+                <span class="item-name ${item.purchased ? 'purchased' : ''}">${escapeHtml(item.name)}</span>
+                <span class="item-quantity">${escapeHtml(item.quantity)}</span>
+                <span class="item-category">${getCategoryLabel(item.category)}</span>
+                <span class="item-priority ${item.priority}">${item.priority}</span>
+                ${item.purchaseUrl ? `<a href="${escapeHtml(item.purchaseUrl)}" target="_blank" class="item-purchase-link">🛒 Buy Now</a>` : ''}
+              </div>
             </div>
             <div class="item-actions">
               <button class="item-btn delete" onclick="deleteItem('${item.id}')">Delete</button>
@@ -626,6 +683,8 @@
       function resetForm() {
         document.getElementById('addItemForm').reset();
         document.getElementById('itemQuantity').value = '1';
+        document.getElementById('itemPhotoUrl').value = '';
+        document.getElementById('itemPurchaseUrl').value = '';
       }
 
       function escapeHtml(text) {
@@ -739,6 +798,8 @@
                 quantity: item.quantity,
                 category: item.category,
                 priority: item.priority,
+                photo_url: item.photoUrl,
+                purchase_url: item.purchaseUrl,
                 purchased: item.purchased,
                 added_by: item.addedBy,
                 created_at: item.createdAt,
@@ -784,6 +845,8 @@
               quantity: row.quantity,
               category: row.category,
               priority: row.priority,
+              photoUrl: row.photo_url || '',
+              purchaseUrl: row.purchase_url || '',
               purchased: row.purchased,
               addedBy: row.added_by,
               createdAt: row.created_at
