@@ -63,15 +63,23 @@
       }
 
       .add-item-form {
-        display: flex;
-        gap: 12px;
-        align-items: flex-end;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+        align-items: end;
       }
 
       .form-group {
         display: flex;
         flex-direction: column;
-        flex: 1;
+      }
+
+      .form-group.full-width {
+        grid-column: 1 / -1;
+      }
+
+      .form-group.photo-group {
+        grid-column: 1 / -1;
       }
 
       .form-label {
@@ -302,6 +310,43 @@
         text-decoration: none;
       }
 
+      .photo-preview {
+        position: relative;
+        margin-top: 8px;
+        display: inline-block;
+      }
+
+      .photo-preview img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+      }
+
+      .clear-photo-btn {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #ef4444;
+        color: white;
+        border: none;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      .clear-photo-btn:hover {
+        background: #dc2626;
+      }
+
       .item-priority.medium {
         background: #fffbeb;
         color: #d97706;
@@ -431,12 +476,12 @@
 
       @media (max-width: 768px) {
         .add-item-form {
-          flex-direction: column;
-          align-items: stretch;
+          grid-template-columns: 1fr;
+          gap: 12px;
         }
 
         .form-group {
-          flex: none;
+          grid-column: 1;
         }
 
         .page-header {
@@ -525,12 +570,16 @@
               <option value="high">High</option>
             </select>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="itemPhotoUrl">Photo URL (optional)</label>
-            <input type="url" id="itemPhotoUrl" class="form-input" placeholder="https://example.com/image.jpg">
-            <small class="form-help">Paste a direct link to an image</small>
+          <div class="form-group photo-group">
+            <label class="form-label" for="itemPhotoFile">Photo (optional)</label>
+            <input type="file" id="itemPhotoFile" class="form-input" accept="image/*" onchange="previewPhoto(this)">
+            <small class="form-help">Upload a photo from your device</small>
+            <div id="photoPreview" class="photo-preview" style="display: none;">
+              <img id="previewImage" src="" alt="Preview">
+              <button type="button" onclick="clearPhoto()" class="clear-photo-btn">×</button>
+            </div>
           </div>
-          <div class="form-group">
+          <div class="form-group full-width">
             <label class="form-label" for="itemPurchaseUrl">Purchase URL (optional)</label>
             <input type="url" id="itemPurchaseUrl" class="form-input" placeholder="https://store.com/product">
             <small class="form-help">Link to where you can buy this item</small>
@@ -587,23 +636,52 @@
       document.getElementById('addItemForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const itemData = {
-          id: Date.now().toString(),
-          name: document.getElementById('itemName').value,
-          quantity: document.getElementById('itemQuantity').value || '1',
-          category: document.getElementById('itemCategory').value,
-          priority: document.getElementById('itemPriority').value,
-          photoUrl: document.getElementById('itemPhotoUrl').value || '',
-          purchaseUrl: document.getElementById('itemPurchaseUrl').value || '',
-          purchased: false,
-          addedBy: localStorage.getItem('mjii_device_id') || generateDeviceId(),
-          createdAt: new Date().toISOString()
-        };
+        const photoFile = document.getElementById('itemPhotoFile').files[0];
+        let photoUrl = '';
+        
+        // Convert uploaded file to data URL
+        if (photoFile) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const itemData = {
+              id: Date.now().toString(),
+              name: document.getElementById('itemName').value,
+              quantity: document.getElementById('itemQuantity').value || '1',
+              category: document.getElementById('itemCategory').value,
+              priority: document.getElementById('itemPriority').value,
+              photoUrl: e.target.result,
+              purchaseUrl: document.getElementById('itemPurchaseUrl').value || '',
+              purchased: false,
+              addedBy: localStorage.getItem('mjii_device_id') || generateDeviceId(),
+              createdAt: new Date().toISOString()
+            };
 
-        items.push(itemData);
-        saveItems();
-        loadItems();
-        resetForm();
+            items.push(itemData);
+            saveItems();
+            loadItems();
+            resetForm();
+          };
+          reader.readAsDataURL(photoFile);
+        } else {
+          // No photo uploaded
+          const itemData = {
+            id: Date.now().toString(),
+            name: document.getElementById('itemName').value,
+            quantity: document.getElementById('itemQuantity').value || '1',
+            category: document.getElementById('itemCategory').value,
+            priority: document.getElementById('itemPriority').value,
+            photoUrl: '',
+            purchaseUrl: document.getElementById('itemPurchaseUrl').value || '',
+            purchased: false,
+            addedBy: localStorage.getItem('mjii_device_id') || generateDeviceId(),
+            createdAt: new Date().toISOString()
+          };
+
+          items.push(itemData);
+          saveItems();
+          loadItems();
+          resetForm();
+        }
       });
 
       // Clear all items
@@ -683,8 +761,30 @@
       function resetForm() {
         document.getElementById('addItemForm').reset();
         document.getElementById('itemQuantity').value = '1';
-        document.getElementById('itemPhotoUrl').value = '';
+        document.getElementById('itemPhotoFile').value = '';
         document.getElementById('itemPurchaseUrl').value = '';
+        clearPhoto();
+      }
+
+      function previewPhoto(input) {
+        const preview = document.getElementById('photoPreview');
+        const previewImage = document.getElementById('previewImage');
+        
+        if (input.files && input.files[0]) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(input.files[0]);
+        } else {
+          preview.style.display = 'none';
+        }
+      }
+
+      function clearPhoto() {
+        document.getElementById('itemPhotoFile').value = '';
+        document.getElementById('photoPreview').style.display = 'none';
       }
 
       function escapeHtml(text) {
