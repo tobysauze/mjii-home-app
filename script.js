@@ -1,3 +1,7 @@
+// Supabase configuration for engine countdown sync
+window.SUPABASE_URL = 'https://sfcvfadxgfpdoeachfal.supabase.co';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmY3ZmYWR4Z2ZwZG9lYWNoZmFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MDI2ODYsImV4cCI6MjA3MjQ3ODY4Nn0.WhwYwHUz-elJHx4bXTNHw5eKF_VO47I3UM3HZXzQ5jU';
+
 // Configure your real links here
 const LINKS = {
   voly: "https://secure.voly.co.uk/?r=T",
@@ -109,6 +113,82 @@ const NOTIFY_STORAGE_KEY = "engine_last_notified_ymd";
 const EMAIL_SERVICE_URL = "http://localhost:8787/send"; // change if deployed
 const DEFAULT_RECIPIENTS = ["tobysauze@hotmail.com"]; // notification recipients
 
+// Initialize Supabase client for engine countdown sync
+let supabaseClient = null;
+if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+  supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false }
+  });
+}
+
+// Engine countdown cloud sync functions
+async function syncEngineCountdownToCloud(lastStartedIso) {
+  if (!supabaseClient) return false;
+  
+  try {
+    const { error } = await supabaseClient
+      .from('engine_countdown')
+      .upsert({
+        id: 'main_engine',
+        last_started: lastStartedIso,
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('Failed to sync engine countdown to cloud:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Engine countdown cloud sync error:', error);
+    return false;
+  }
+}
+
+async function loadEngineCountdownFromCloud() {
+  if (!supabaseClient) return null;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('engine_countdown')
+      .select('last_started')
+      .eq('id', 'main_engine')
+      .single();
+    
+    if (error) {
+      console.error('Failed to load engine countdown from cloud:', error);
+      return null;
+    }
+    
+    return data?.last_started || null;
+  } catch (error) {
+    console.error('Engine countdown cloud load error:', error);
+    return null;
+  }
+}
+
+async function loadEngineStateFromCloud(widget) {
+  // Try to load from cloud first
+  const cloudIso = await loadEngineCountdownFromCloud();
+  
+  if (cloudIso) {
+    // Use cloud data and sync to localStorage
+    try { localStorage.setItem(ENGINE_STORAGE_KEY, cloudIso); } catch (_) {}
+    renderEngineState(widget, new Date(cloudIso));
+  } else {
+    // Fallback to localStorage
+    let lastIso = null;
+    try { lastIso = localStorage.getItem(ENGINE_STORAGE_KEY); } catch (_) {}
+    const lastDate = lastIso ? new Date(lastIso) : null;
+    renderEngineState(widget, lastDate);
+    
+    // If we have local data but no cloud data, sync to cloud
+    if (lastIso) {
+      await syncEngineCountdownToCloud(lastIso);
+    }
+  }
+}
+
 function initEngineWidget() {
   const widget = document.createElement("aside");
   widget.className = "engine-widget";
@@ -136,10 +216,27 @@ function initEngineWidget() {
   }
 
   const startBtn = widget.querySelector("#engine-start-btn");
-  startBtn.addEventListener("click", () => {
+  startBtn.addEventListener("click", async () => {
     const nowIso = new Date().toISOString();
+    
+    // Save locally
     try { localStorage.setItem(ENGINE_STORAGE_KEY, nowIso); } catch (_) {}
+    
+    // Sync to cloud
+    const cloudSyncSuccess = await syncEngineCountdownToCloud(nowIso);
+    
+    // Update UI
     renderEngineState(widget, new Date(nowIso));
+    
+    // Show sync status briefly
+    if (cloudSyncSuccess) {
+      const statusEl = widget.querySelector("#engine-status");
+      const originalText = statusEl.textContent;
+      statusEl.textContent = "Engine started & synced to all devices";
+      setTimeout(() => {
+        statusEl.textContent = originalText;
+      }, 3000);
+    }
   });
 
   const testBtn = widget.querySelector("#engine-test-btn");
@@ -160,11 +257,8 @@ function initEngineWidget() {
     testBtn.disabled = false;
   });
 
-  // Initial render from storage
-  let lastIso = null;
-  try { lastIso = localStorage.getItem(ENGINE_STORAGE_KEY); } catch (_) {}
-  const lastDate = lastIso ? new Date(lastIso) : null;
-  renderEngineState(widget, lastDate);
+  // Initial render - load from cloud first, then localStorage
+  loadEngineStateFromCloud(widget);
 
   // Optional: update status every minute
   setInterval(() => {
@@ -187,7 +281,6 @@ window.addEventListener('resize', () => {
     widget.remove();
     // Reinitialize with new positioning
     initEngineWidget();
-    loadEngineState();
   }
 });
 
