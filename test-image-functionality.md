@@ -1,4 +1,4 @@
-# Daily Work List - Image & Archive Functionality Test Guide
+# Daily Work List - Image, Archive & Person Cards Test Guide
 
 ## Setup Instructions
 
@@ -76,6 +76,30 @@
 5. Test completing jobs on the second device
 6. Verify archive changes sync back to the first device
 
+### 9. Person Cards Functionality
+1. Add several jobs assigned to different people
+2. Verify the "Jobs by Person" section appears below the main jobs
+3. Check that an "All Jobs" card shows all active jobs
+4. Verify individual person cards show only their assigned jobs
+5. Test clicking on card headers to expand/collapse them
+6. Verify job counts appear as badges on each card
+
+### 10. Person Cards Interaction
+1. Click "Expand All" to open all person cards
+2. Click "Collapse All" to close all person cards
+3. Test individual card toggles by clicking headers
+4. Verify jobs can be completed, edited, and deleted from person cards
+5. Test that images are visible in person card job views
+6. Verify empty person cards show appropriate empty states
+
+### 11. Person Cards Cross-Device Sync
+1. Add jobs assigned to different people on one device
+2. Open the daily work list on another device
+3. Click "Sync Now" or wait for auto-sync
+4. Verify person cards appear with correct job assignments
+5. Test completing jobs from person cards on second device
+6. Verify changes sync back to the first device
+
 ## Expected Behavior
 
 ### Images:
@@ -94,6 +118,17 @@
 - "Undo" should move jobs back to active list
 - Archive should sync across all devices
 - Clear Archive should permanently delete all archived jobs
+
+### Person Cards:
+- "All Jobs" card should show all active jobs
+- Individual person cards should show only their assigned jobs
+- Cards should display job counts as badges
+- Cards should be toggleable to expand/collapse
+- "Expand All" and "Collapse All" buttons should work
+- Jobs in person cards should have full functionality (complete, edit, delete)
+- Images should be visible in person card job views
+- Empty person cards should show appropriate empty states
+- Person cards should sync across all devices
 
 ## Troubleshooting
 
