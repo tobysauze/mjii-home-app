@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS daily_jobs (
   estimated_time TEXT,
   description TEXT,
   completed BOOLEAN NOT NULL DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  archived BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -34,3 +36,7 @@ CREATE TRIGGER update_daily_jobs_updated_at
   BEFORE UPDATE ON daily_jobs 
   FOR EACH ROW 
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_daily_jobs_archived ON daily_jobs(archived);
+CREATE INDEX IF NOT EXISTS idx_daily_jobs_completed_at ON daily_jobs(completed_at);

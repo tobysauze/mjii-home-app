@@ -14,3 +14,4 @@ WHERE photo_url IS NULL;
 UPDATE shopping_items 
 SET purchase_url = '' 
 WHERE purchase_url IS NULL;
+

@@ -34,3 +34,4 @@ CREATE TRIGGER update_engine_countdown_updated_at
 INSERT INTO engine_countdown (id, last_started) 
 VALUES ('main_engine', NULL) 
 ON CONFLICT (id) DO NOTHING;
+
